@@ -11,15 +11,18 @@ def read_serial_data_to_csv(port):
     baudrate = 9600  # Baud rate for serial communication
     timeout = 1  # Timeout for reading from the serial port (in seconds)
     output_csv = "output.csv"  # Output CSV file name
+    percent = input("Enter percent: ")
     start_time = time.time()
     try:
         ser = serial.Serial(port, baudrate, timeout=timeout)
+        ser.write(("P" + percent+"\n").encode())
         with open(output_csv, mode='w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(["Timestamp", "Percentage (%)", "Reading (kg)"])
             try:
                 print(f"Reading data from {port} and writing to {output_csv}...")
                 while True:
+                    ser.write(("P" + percent+"\n").encode())
                     line = ser.readline().decode('utf-8').strip()
                     if line:
                         #Im assuming that the data is in "percentage,kg" format with this one
@@ -38,6 +41,7 @@ def read_serial_data_to_csv(port):
                 #Ends the program when you stop it
                 print("Data logging stopped by user.")
             finally:
+                ser.write("STOP".encode())
                 ser.close()
 
     except serial.SerialException:

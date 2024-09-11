@@ -57,11 +57,11 @@ void loop() {
   delay(1000);
 }
 
-int parkersFunctioen(int status) {
-  speedPercent = ((pwmMax - pwmMin) / 100) * status;
+int parkersFunction(int status) {
+  speedPercent = ((pwmMax - pwmMin) / 100) * status + pwmMin;
   servo.writeMicroseconds(speedPercent);
   Serial.print("PWM set to ");
-  Serial.print(status);
+  Serial.print(speedPercent);
   Serial.println("%");
 
   return (speedPercent);
