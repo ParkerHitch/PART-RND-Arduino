@@ -8,7 +8,7 @@ import argparse
 
 def read_serial_data_to_csv(port):
     # Hardcoded parameters for serial communication and output file - might wanna change em idk what yall using
-    baudrate = 112500  # Baud rate for serial communication
+    baudrate = 9600  # Baud rate for serial communication
     timeout = 1  # Timeout for reading from the serial port (in seconds)
     output_csv = "output.csv"  # Output CSV file name
     start_time = time.time()
