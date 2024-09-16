@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter.constants import END
-import serial
+import serial # pip install pyserial
 import os
 import csv
 import time
@@ -97,8 +97,7 @@ def sendln(line):
 arduino_id = input("Enter the Arduino ID: ")
 
 # Create a serial connection to the Arduino
-# arduino = serial.Serial(arduino_id, 9600, timeout = 0.2)
-arduino = None
+arduino = serial.Serial(arduino_id, 9600, timeout = 0.2)
 
 enabled = False
 start_time = 0.0
