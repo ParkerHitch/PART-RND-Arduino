@@ -5,9 +5,8 @@ SoftwareSerial loraSerial1(6, 7); // RX1, TX1 (Module 1)
 SoftwareSerial loraSerial2(4, 5); // RX2, TX2 (Module 2)
 const int interruptPin = 12;      // Used for TX and RX with the pixhawk
 bool randomizeCancellation = false;
-const String FAAPlaneReg = "AXXBYY";
-String oldChildAddress = "1";
-String slaveAddy = "1"; 
+String oldChildAddress = "2";
+int counter = 5;
 void setup()
 {
 
@@ -28,7 +27,7 @@ void setup()
         Serial.println("Module 1 response:" + loraSerial1.readString());
     }
     delay(1000);
-    loraSerial2.println("AT+ADDRESS=" + oldChildAddress); // Set Module 2 address as plane reg to init
+    loraSerial2.println("AT+ADDRESS="+oldChildAddress); // Set Module 2 address as plane reg to init
     delay(1000);
     if (loraSerial2.available())
     {
@@ -39,26 +38,37 @@ void setup()
     randomSeed(0);
 }
 
-void loop()
+
+
+void loop()    
 {
+
     int randomAddress = random(2, 1000);
     String newChildAddress = String(randomAddress);
 
     // Send the random address from Master (Module 1) to Slave (Module 2)
-    if (!randomizeCancellation)
+    if (counter == 0)
     {
-        String messageToSend = "86.AUGUST-" + newChildAddress;
+        counter = 5;
+        String messageToSend = newChildAddress;
         String messageLength = String(messageToSend.length());
-        loraSerial1.println("AT+SEND=AUGUST-" + oldChildAddress + "," + messageLength + "," + messageToSend);
-        Serial.println("Sent random address: AUGUST-" + oldChildAddress + " to " + newChildAddress);
+        loraSerial1.println("AT+SEND=" + oldChildAddress + "," + messageLength + "," + messageToSend);
+        Serial.println("Sent random address:" + oldChildAddress + " to " + newChildAddress);
+        oldChildAddress = newChildAddress;
     }
+    else {
+        loraSerial1.println("AT+SEND=" + oldChildAddress+ ",5,Hello");
+    }
+
+
     // Listen for the message on Module 2 (Receiver)
     if (loraSerial2.available())
     {
         String receivedMessage = loraSerial2.readStringUntil('\n');
-        Serial.println("Message received on Address=2");
+        Serial.println("Message received on Address="+oldChildAddress);
         Serial.println(receivedMessage);
-    }
 
+    }
+    counter--;
     delay(2000);
 }
