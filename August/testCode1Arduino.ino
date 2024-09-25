@@ -3,8 +3,13 @@
 // Define two software serial ports for the two RYLR993 modules
 SoftwareSerial loraSerial1(6, 7); // RX1, TX1 (Module 1)
 SoftwareSerial loraSerial2(4, 5); // RX2, TX2 (Module 2)
+const int interruptPin = 12;      // Used for TX and RX with the pixhawk
+bool randomizeCancellation = false;
+const string FAAPlaneReg = "AXXBYY";
 
-void setup() {
+void setup()
+{
+
   Serial.begin(9600); // For debugging
 
   // Start communication with both RYLR993 modules
@@ -17,30 +22,34 @@ void setup() {
 
   loraSerial1.println("AT+ADDRESS=1"); // Set Module 1 address
   delay(1000);
-  if (loraSerial1.available()){
-    Serial.println("Module 1 response:"+  loraSerial1.readString());
+  if (loraSerial1.available())
+  {
+    Serial.println("Module 1 response:" + loraSerial1.readString());
   }
   delay(1000);
-  loraSerial2.println("AT+ADDRESS=2"); // Set Module 2 address
+  loraSerial2.println("AT+ADDRESS=" + FAAPlaneReg); // Set Module 2 address as plane reg to init
   delay(1000);
-  if (loraSerial2.available()){
-    Serial.println("Module 2 response:"+ loraSerial2.readString());
+  if (loraSerial2.available())
+  {
+    Serial.println("Module 2 response:" + loraSerial2.readString());
   }
-  
 
   Serial.println("Setup complete.");
+  randomSeed(0);
 }
 
-void loop() {
+void loop()
+{
   // Send a test message from Module 1 (Transmitter) to Module 2 (Receiver)
   loraSerial1.println("AT+SEND=2,5,Hello");
 
   // Listen for the message on Module 2 (Receiver)
-  if (loraSerial2.available()) {
+  if (loraSerial2.available())
+  {
     String receivedMessage = loraSerial2.readStringUntil('\n');
     Serial.println("Message received on Address=2");
     Serial.println(receivedMessage);
   }
 
-  delay(2000); // Wait 5 seconds before repeating
+  delay(2000);
 }
