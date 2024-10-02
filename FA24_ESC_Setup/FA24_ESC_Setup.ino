@@ -54,7 +54,7 @@ void loop() {
   Serial.print(", ");
   //Serial.print("Load: ");
   Serial.println(reading / 96775);
-  delay(1000);
+  delay(200);
 }
 
 int parkersFunction(int status) {
