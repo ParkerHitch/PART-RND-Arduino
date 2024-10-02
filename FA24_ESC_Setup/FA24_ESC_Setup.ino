@@ -38,6 +38,13 @@ void loop() {
       if (status <= 100 && status >= 0) {
         speedPercent = parkersFunction(status);
       }
+    } else if (nextChar == 'T') {
+      char buff[3] = {};
+      size_t read = Serial.readBytes(buff, 3);
+      if (read == 3 && memcmp(read, "ARE", 3)){
+        // Tare time:
+        load.tare()
+      }
     } else if (nextChar != 10) {
       status = 0;
       speedPercent = parkersFunction(status);

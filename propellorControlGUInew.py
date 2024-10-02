@@ -164,6 +164,7 @@ while True:
     # Recieve serial data:
 
     newData = arduino.readline()
+    data.extend(newData)
 
     elapsed_time = round(time.time() - start_time, 3) if enabled else 0.0
     stopwatch_elapsed.configure(text=f"{elapsed_time}")
@@ -186,13 +187,12 @@ while True:
 
         parsed = line.split(',')
         if enabled:
-            if len(data) == 2:
-                try:
-                    percentage = float(parsed[0])
-                    reading_kg = float(parsed[1])
-                    csv_writer.writerow([elapsed_time, percentage, reading_kg])
-                except ValueError:
-                    print(f"Error in parsing data: {line}")
+            try:
+                percentage = float(parsed[0])
+                reading_kg = float(parsed[1])
+                csv_writer.writerow([elapsed_time, percentage, reading_kg])
+            except ValueError:
+                print(f"Error in parsing data: {line}")
 
         # reset data
         data = bytearray()
