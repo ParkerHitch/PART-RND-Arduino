@@ -100,7 +100,6 @@ void loop()
                 int receivedAddress = thirdValue.toInt();
                 Serial.println("Address change has been requested: " + String(thirdValue));
                 handleAddressChange(thirdValue);
-                sendMorseCode(thirdValue);
                 sendACK("1");
                 Serial.println("Address change complete to: " + String(thirdValue));
                 delay(1000);
