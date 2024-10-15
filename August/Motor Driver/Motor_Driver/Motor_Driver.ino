@@ -1,45 +1,50 @@
-// Pin definitions
-const int pwmPin = 9;    // PWM pin connected to MD20A PWM input
-const int dirPin = 8;    // Direction pin connected to MD20A DIR input
-const int potPin = A0;   // Analog input pin for potentiometer
-const int buttonPin = 7; // Pin for direction control button
+#define DIR_PIN 8    // Direction pin for MD20A
+#define PWM_PIN 9    // PWM pin for MD20A
 
-// Variables for direction control
-bool motorDirection = LOW;  // Initial motor direction is forward (DIR = LOW)
-bool lastButtonState = HIGH; // Track the previous state of the button
+const float height = 1000.0;  // Desired height in cm
+const float speed = 50.0;    // Motor speed in cm/s (depends on your setup)
+const int pwmSpeed = 128;     // PWM value (0-255) to control motor speed
+const int direction = 0;      // 0 = Forward, 1 = Reverse
+
+unsigned long runTime;  // Motor run time in milliseconds
+unsigned long startTime;  // Start time of the motor run
 
 void setup() {
-  // Set PWM and direction pins as outputs
-  pinMode(pwmPin, OUTPUT);
-  pinMode(dirPin, OUTPUT);
-  
-  // Set the direction control button as an input with an internal pull-up
-  pinMode(buttonPin, INPUT_PULLUP); 
+  pinMode(DIR_PIN, OUTPUT);  // Set DIR pin as output
+  pinMode(PWM_PIN, OUTPUT);  // Set PWM pin as output
 
-  // Set initial motor direction
-  digitalWrite(dirPin, motorDirection);
+  // Calculate the run time required to reach the given height
+  runTime = (height / speed) * 1000;  // Convert seconds to milliseconds
+
+  Serial.begin(9600);  // Start serial communication
+  Serial.print("Motor will run for ");
+  Serial.print(runTime / 1000.0);
+  Serial.println(" seconds to reach the target height.");
+  
+  // Start the motor
+  startMotor();
 }
 
 void loop() {
-  // Read the potentiometer value (0 to 1023)
-  int potValue = analogRead(potPin);
-
-  // Map the potentiometer value to PWM range (0 to 255)
-  int motorSpeed = map(potValue, 0, 1023, 0, 255);
-
-  // Check if the button is pressed to change the direction
-  bool buttonState = digitalRead(buttonPin);
-  if (buttonState == LOW && lastButtonState == HIGH) {
-    // Button was pressed, toggle the direction
-    motorDirection = !motorDirection;
-    digitalWrite(dirPin, motorDirection);  // Update the motor direction
+  // Stop the motor if the calculated time has passed
+  if (millis() - startTime >= runTime) {
+    stopMotor();
   }
-  // Save the current button state for next loop iteration
-  lastButtonState = buttonState;
+}
 
-  // Send the PWM signal to control motor speed
-  analogWrite(pwmPin, motorSpeed);
+// Function to start the motor
+void startMotor() {
+  digitalWrite(DIR_PIN, direction);  // Set motor direction
+  analogWrite(PWM_PIN, pwmSpeed);    // Set motor speed using PWM
+  startTime = millis();  // Record the start time
   
-  // Optional delay to debounce button and smooth PWM signal
-  delay(50); 
+  Serial.println("Motor started.");
+}
+
+// Function to stop the motor
+void stopMotor() {
+  analogWrite(PWM_PIN, 0);  // Stop the motor by setting PWM to 0
+  Serial.println("Motor stopped.");
+  
+  while (true);  // Stop the loop indefinitely
 }
