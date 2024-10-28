@@ -4,16 +4,21 @@
 #define ENC_B_PIN 3    // Encoder channel B pin
 
 #define CIRCUMFERENCE 10.0 // Circumference of the spool in cm (adjust based on spool size)
-#define PPR 16             // Pulses per revolution (adjust based on your encoder)
+#define PPR 64             // Pulses per revolution (adjust based on your encoder)
 #define GEAR_RATIO 1.0     // Gear ratio of the motor (adjust if necessary)
 
+#define GAIN_P (10/64.0)
+// #define GAIN_P  0
+#define GAIN_I  0.0001
+#define GAIN_FF 0
+
 // Desired height and motor speed
-const float height = 100.0;   // Target height in cm
-const int pwmSpeed = 5;      // Initial PWM value (can be controlled with PID later)
-const int direction = 0;       // 0 = Forward, 1 = Reverse
+const int pwmSpeed = 15;      // Initial PWM value (can be controlled with PID later)
+int direction = 0;           // 0 = Forward, 1 = Reverse
+float integralAccumulator = 0;
 
 volatile long encoderTicks = 0;   // Counts encoder ticks
-long targetTicks = 270;             // Target encoder ticks to reach desired height
+long targetTicks = 270;           // Target encoder ticks to reach desired height
 
 void setup() {
   pinMode(DIR_PIN, OUTPUT);   // Set DIR pin as output
@@ -28,29 +33,68 @@ void setup() {
 
   Serial.begin(9600);
 
-  // Calculate the number of ticks required to reach the desired height
-  float rotationsNeeded = height / CIRCUMFERENCE;
-  targetTicks = rotationsNeeded * PPR * GEAR_RATIO;  // Calculate total target ticks
+  Serial.println("System Initialized.");
 
-  Serial.print("Target ticks: ");
-  Serial.println(targetTicks);
+  zeroDisplacement();
 
-  //Start the motor
-  startMotor();
+  Serial.println("Enter disp: ");
+  setTargetDisplacement(10);
+}
+
+void zeroDisplacement() {
+  encoderTicks = 0;  // Resets encoder ticks to 0
+  Serial.println("Encoder reset to zero.");
+}
+
+void setTargetDisplacement(float dispFt) {
+  // Convert displacement from feet to cm, then calculate target ticks
+  float dispCm = dispFt * 30.48;  // Convert feet to cm
+  float rotationsNeeded = dispCm / CIRCUMFERENCE;
+  targetTicks = abs(rotationsNeeded * PPR * GEAR_RATIO);
+
+  Serial.print("Target displacement set to ");
+  Serial.print(dispFt);
+  Serial.print(" ft (");
+  Serial.print(targetTicks);
+  Serial.println(" ticks).");
+
+  // startMotor();  // Start the motor to drive towards the target displacement
 }
 
 void loop() {
-  // Simple bang-bang control to stop the motor when the target is reached
-  if (abs(encoderTicks) >= targetTicks) {
-    stopMotor();
+  Serial.print("Target: ");
+  Serial.println(targetTicks);
+  Serial.print("Actual: ");
+  Serial.println(encoderTicks);
+  int tickError = targetTicks - encoderTicks;
+
+  integralAccumulator += tickError;
+
+  float pCorrected = tickError * GAIN_P;
+
+  pCorrected += integralAccumulator * GAIN_I;
+
+  if (pCorrected > pwmSpeed) {
+    pCorrected = pwmSpeed;
+  } else if (pCorrected < -pwmSpeed){
+    pCorrected = -pwmSpeed;
   }
-  // analogWrite(PWM_PIN, 0);    // Set motor speed using PWM~
-  // // Serial.println("Loc ");
-  // Serial.println(encoderTicks);
-  // Serial.println("\n");
+
+  if (Serial.available()) {
+    setTargetDisplacement(Serial.parseFloat());
+    Serial.read();
+  }
+
+  Serial.println(GAIN_FF + pCorrected);
+  setPowerSigned(GAIN_FF + pCorrected);
 }
 
-void a_changed(){
+void setPowerSigned(int power) {
+  digitalWrite(DIR_PIN, power > 0 ? 1 : 0);
+  analogWrite(PWM_PIN, abs(power));
+}
+
+void a_changed() {
   int a = digitalRead(ENC_A_PIN);
   int b = digitalRead(ENC_B_PIN);
 
@@ -59,10 +103,9 @@ void a_changed(){
   } else {
     encoderTicks--;  // Reverse direction
   }
-
 }
 
-void b_changed(){
+void b_changed() {
   int a = digitalRead(ENC_A_PIN);
   int b = digitalRead(ENC_B_PIN);
   
@@ -73,20 +116,6 @@ void b_changed(){
   }
 }
 
-// Encoder tick handler (counts the ticks for both channels A & B)
-void encoderTick() {
-  int a = digitalRead(ENC_A_PIN);
-  int b = digitalRead(ENC_B_PIN);
-
-  // Determine the direction of rotation by comparing channel A and B
-  if (a == b) {
-    encoderTicks++;  // Forward direction
-  } else {
-    encoderTicks--;  // Reverse direction
-  }
-}
-
-// Function to start the motor
 void startMotor() {
   digitalWrite(DIR_PIN, direction);  // Set motor direction
   analogWrite(PWM_PIN, pwmSpeed);    // Set motor speed using PWM
@@ -94,7 +123,6 @@ void startMotor() {
   Serial.println("Motor started.");
 }
 
-// Function to stop the motor
 void stopMotor() {
   analogWrite(PWM_PIN, 0);  // Stop the motor by setting PWM to 0
   Serial.println("Motor stopped.");
@@ -102,6 +130,4 @@ void stopMotor() {
   // Disable interrupts to stop counting encoder ticks
   detachInterrupt(digitalPinToInterrupt(ENC_A_PIN));
   detachInterrupt(digitalPinToInterrupt(ENC_B_PIN));
-
-  while (true);  // Stop the loop indefinitely
 }
