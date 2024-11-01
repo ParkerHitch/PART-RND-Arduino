@@ -43,7 +43,7 @@ void loop() {
       size_t read = Serial.readBytes(buff, 3);
       if (read == 3 && memcmp(read, "ARE", 3)){
         // Tare time:
-        load.tare()
+        load.tare();
       }
     } else if (nextChar != 10) {
       status = 0;

@@ -1,24 +1,25 @@
-#define DIR_PIN 8      // Direction pin for MD20A
-#define PWM_PIN 9      // PWM pin for MD20A
+#define DIR_PIN 4      // Direction pin for MD20A
+#define PWM_PIN 5      // PWM pin for MD20A
 #define ENC_A_PIN 2    // Encoder channel A pin (interrupt)
 #define ENC_B_PIN 3    // Encoder channel B pin
 
-#define CIRCUMFERENCE 10.0 // Circumference of the spool in cm (adjust based on spool size)
+#define CIRCUMFERENCE 18.0 // Circumference of the spool in cm (adjust based on spool size)
 #define PPR 64             // Pulses per revolution (adjust based on your encoder)
 #define GEAR_RATIO 1.0     // Gear ratio of the motor (adjust if necessary)
 
-#define GAIN_P (10/64.0)
-// #define GAIN_P  0
-#define GAIN_I  0.0001
+// #define GAIN_P (10/64.0)
+#define GAIN_P  0
+// #define GAIN_I  0.0001
+#define GAIN_I  0
 #define GAIN_FF 0
 
 // Desired height and motor speed
-const int pwmSpeed = 15;      // Initial PWM value (can be controlled with PID later)
+const int pwmSpeed = 3;      // Initial PWM value (can be controlled with PID later)
 int direction = 0;           // 0 = Forward, 1 = Reverse
 float integralAccumulator = 0;
 
 volatile long encoderTicks = 0;   // Counts encoder ticks
-long targetTicks = 270;           // Target encoder ticks to reach desired height
+long targetTicks = 0;           // Target encoder ticks to reach desired height
 
 void setup() {
   pinMode(DIR_PIN, OUTPUT);   // Set DIR pin as output
@@ -38,7 +39,7 @@ void setup() {
   zeroDisplacement();
 
   Serial.println("Enter disp: ");
-  setTargetDisplacement(10);
+  setTargetDisplacement(0);
 }
 
 void zeroDisplacement() {
@@ -90,7 +91,7 @@ void loop() {
 }
 
 void setPowerSigned(int power) {
-  digitalWrite(DIR_PIN, power > 0 ? 1 : 0);
+  digitalWrite(DIR_PIN, power < 0 ? 1 : 0);
   analogWrite(PWM_PIN, abs(power));
 }
 
