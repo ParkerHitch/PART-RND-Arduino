@@ -1,29 +1,27 @@
+#include <Servo.h>
 #include <SoftwareSerial.h>
 
-// Define two software serial ports for the two RYLR993 modules
+Servo continuousServo;
 SoftwareSerial loraSerial2(4, 5); // RX2, TX2 (Module 2)
-const int interruptPin = 12;      // Used for TX and RX with the pixhawk
+
+struct ContinousServoValues
+{
+    const int dropOneBottle = 500;
+    const int stationary = 90;
+    const int dropAllBottles = dropOneBottle * 3; // need an offset as well
+
+} servoValues;
 bool randomizeCancellation = false;
 const int ledPin = 13;
-const String morseCode[10] = {
-    ".----", // 0
-    "..---", // 1
-    "...--", // 2
-    "....-", // 3
-    ".....", // 4
-    "-....", // 5
-    "--...", // 6
-    "---..", // 7
-    "----.", // 8
-    "-----"  // 9
-};
-
+const int servoPin = 9;
+const String DropPayloadBegin_String = "DROP_PAYLOAD";
 void setup()
 {
-    Serial.begin(9600);      // For debugging
+    continuousServo.attach(servoPin);
+    Serial.begin(9600);
     pinMode(ledPin, OUTPUT);
-    digitalWrite(ledPin, LOW);
-    loraSerial2.begin(9600); // Module 2 (Receiver)
+    // digitalWrite(ledPin, LOW); // Cut the led off
+    loraSerial2.begin(9600);
     handleAddressChange("2");
     Serial.println("Setup complete.");
 }
@@ -39,48 +37,36 @@ bool isValidInteger(String str)
     }
     return true;
 }
-void sendMorseCode(const String &message){
-    for (char c : message) {
-    if (isDigit(c)) {
-      String code = morseCode[c - '0'];
-      for (char dotDash : code) {
-        if (dotDash == '.') {
-          digitalWrite(ledPin, HIGH); // Turn LED on
-          delay(200); // Duration for a dot
-          digitalWrite(ledPin, LOW); // Turn LED off
-          delay(200); // Space between parts
-        } else if (dotDash == '-') {
-          digitalWrite(ledPin, HIGH); // Turn LED on
-          delay(600); // Duration for a dash
-          digitalWrite(ledPin, LOW); // Turn LED off
-          delay(200); // Space between parts
-        }
-      }
-      delay(600); // Space between letters
-    }
-  }
+
+void handlePayloadDrop(String PayloadMessage)
+{
+    Serial.println("Handle Payload Drop " + PayloadMessage);
+    continuousServo.write(servoValues.dropOneBottle);
+    delay(500);
+    continuousServo.write(servoValues.stationary);
+    sendACK("1");
+    return;
 }
+
 void handleAddressChange(String address)
 {
     loraSerial2.println("AT+OPMODE=1");
-    // delay(1000);
     loraSerial2.println("AT+RESET");
-    // delay(1000);
     loraSerial2.println("AT+ADDRESS=" + address);
-    // delay(500);
     loraSerial2.println("AT+ADDRESS?");
     if (loraSerial2.available())
     {
         String response = loraSerial2.readString();
         Serial.println(response);
+        sendACK("1");
     }
 }
-
 
 void sendACK(String address)
 {
     loraSerial2.println("AT+SEND=" + address + ",3,ACK");
 }
+
 void loop()
 {
     if (loraSerial2.available())
@@ -103,6 +89,10 @@ void loop()
                 sendACK("1");
                 Serial.println("Address change complete to: " + String(thirdValue));
                 delay(1000);
+            }
+            else if (thirdValue.startsWith(DropPayloadBegin_String))
+            {
+                handlePayloadDrop(receivedMessage);
             }
         }
     }
