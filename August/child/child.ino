@@ -6,8 +6,9 @@ SoftwareSerial loraSerial2(4, 5); // RX2, TX2 (Module 2)
 
 struct ContinousServoValues
 {
-    const int dropOneBottle = 500;
+    const int rotationRangeOne = 0;
     const int stationary = 90;
+    const int dropOneBottle = 4000;
     const int dropAllBottles = dropOneBottle * 3; // need an offset as well
 
 } servoValues;
@@ -37,12 +38,20 @@ bool isValidInteger(String str)
     }
     return true;
 }
+void handlePayloadDrop1()
+{
+    continuousServo.write(servoValues.rotationRangeOne);
+    delay(servoValues.dropOneBottle);
+    continuousServo.write(servoValues.stationary);
+    sendACK("1");
+    return;
+}
 
 void handlePayloadDrop(String PayloadMessage)
 {
     Serial.println("Handle Payload Drop " + PayloadMessage);
-    continuousServo.write(servoValues.dropOneBottle);
-    delay(500);
+    continuousServo.write(servoValues.rotationRangeOne);
+    delay(servoValues.dropOneBottle);
     continuousServo.write(servoValues.stationary);
     sendACK("1");
     return;
@@ -69,6 +78,7 @@ void sendACK(String address)
 
 void loop()
 {
+    //handlePayloadDrop1();
     if (loraSerial2.available())
     {
         String receivedMessage = loraSerial2.readStringUntil('\n');
