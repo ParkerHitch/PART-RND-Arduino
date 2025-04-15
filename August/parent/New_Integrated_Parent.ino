@@ -29,8 +29,8 @@ SoftwareSerial loraSerial(LORA_RX, LORA_TX);
 // Typically, 1500 µs is neutral. Values greater than 1500 might make the winch raise,
 // while values lower than 1500 will lower the winch.
 const int PWM_IDLE  = 1500;
-const int PWM_RAISE = 1600;   // Adjust for your “raise” direction speed
-const int PWM_LOWER = 1400;   // Adjust for your “lower” direction speed
+const int PWM_RAISE = 1400;   // Adjust for your “raise” direction speed
+const int PWM_LOWER = 1600;   // Adjust for your “lower” direction speed
 
 // --------------------------
 // Encoder & Closed-Loop (Optional)
@@ -90,13 +90,17 @@ void setup() {
     attachInterrupt(digitalPinToInterrupt(ENC_A_PIN), a_changed, CHANGE);
     attachInterrupt(digitalPinToInterrupt(ENC_B_PIN), b_changed, CHANGE);
 
+    setMotor(PWM_IDLE);
+
     Serial.println("System Initialized.");
 }
 
 void loop() {
     // 1. Handle commands from Flight Controller (Pixhawk)
-    if (flightControllerSerial.available() > 0) {
-        char cmd = flightControllerSerial.read();
+    Serial.print("Encoder: ");
+    Serial.println(encoderTicks);
+    if (Serial.available() > 0) {
+        char cmd = Serial.read();
         cmd = toupper(cmd);  // Normalize to uppercase
         switch(cmd) {
             case 'L':
@@ -113,6 +117,14 @@ void loop() {
                 Serial.println("Winch Idle (Stop)...");
                 stopMotor();
                 sendLoRaMessage("Winch Idle");
+                break;
+            case '1':
+                Serial.println("Sending 1");
+                setMotor(2000);
+                break;
+            case '0':
+                Serial.println("Sending 0");
+                setMotor(1000);
                 break;
             default:
                 Serial.print("Unknown command received: ");
@@ -155,8 +167,8 @@ void stopMotor() {
     Serial.println("Motor stopped.");
     
     // Optionally, disable encoder counting until next movement:
-    detachInterrupt(digitalPinToInterrupt(ENC_A_PIN));
-    detachInterrupt(digitalPinToInterrupt(ENC_B_PIN));
+    // detachInterrupt(digitalPinToInterrupt(ENC_A_PIN));
+    // detachInterrupt(digitalPinToInterrupt(ENC_B_PIN));
     
     // (Optional) Reattach interrupts after a short period if needed.
     // attachInterrupt(digitalPinToInterrupt(ENC_A_PIN), a_changed, CHANGE);
