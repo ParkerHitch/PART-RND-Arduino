@@ -29,8 +29,8 @@ SoftwareSerial loraSerial(LORA_RX, LORA_TX);
 // Typically, 1500 µs is neutral. Values greater than 1500 might make the winch raise,
 // while values lower than 1500 will lower the winch.
 const int PWM_IDLE  = 1500;
-const int PWM_RAISE = 1425;   // Adjust for your “raise” direction speed
-const int PWM_LOWER = 1600;   // Adjust for your “lower” direction speed
+int MULTIPLIER      = 5;
+int SPEED = 0;
 
 // --------------------------
 // Encoder & Closed-Loop (Optional)
@@ -104,37 +104,50 @@ void loop() {
         char cmd = Serial.read();
         cmd = toupper(cmd);  // Normalize to uppercase
         bool shouldMessage = cmd != lastCmd;
-        lastCmd = cmd;
+        
         switch(cmd) {
             case 'L':
                 if (shouldMessage)
                     Serial.println("Lowering Winch...");
-                setMotor(PWM_LOWER);
+                setMotor(PWM_IDLE + (MULTIPLIER*SPEED));
+                lastCmd = cmd;
                 // sendLoRaMessage("Winch Lowering");
                 break;
             case 'R':
                 if (shouldMessage)
                     Serial.println("Raising Winch...");
-                setMotor(PWM_RAISE);
+                setMotor(PWM_IDLE - (MULTIPLIER*SPEED));
+                lastCmd = cmd;
                 // sendLoRaMessage("Winch Raising");
                 break;
             case 'I':
                 if (shouldMessage)
                     Serial.println("Winch Idle (Stop)...");
+                lastCmd = cmd;
                 stopMotor();
                 // sendLoRaMessage("Winch Idle");
-                break;
-            case '1':
-                Serial.println("Sending 1");
-                setMotor(2000);
-                break;
-            case '0':
-                Serial.println("Sending 0");
-                setMotor(1000);
                 break;
             case 'D':
                 // Serial.println("Sending drop");
                 sendLoRaMessage("DROP_PAYLOAD");
+                break;
+            case 'P':
+                // if (shouldMessage)
+                //     Serial.println("Received speed command 'P'");
+                // Build number after 'P'
+                String numStr = "";
+                delay(5); // brief delay to allow remaining bytes to arrive
+            
+                while (Serial.available()) {
+                  char nextChar = Serial.peek();
+                  if (isDigit(nextChar)) {
+                    numStr += (char)Serial.read(); // consume and add digit
+                  } else {
+                    break;
+                  }
+                }
+                SPEED = numStr.toInt(); // Convert string to int (0–100)
+                // Serial.println(SPEED);
                 break;
             default:
                 Serial.print("Unknown command received: ");
