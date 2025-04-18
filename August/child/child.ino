@@ -7,11 +7,13 @@ SoftwareSerial loraSerial2(4, 5); // RX2, TX2 (Module 2)
 struct ContinousServoValues
 {
     const int rotationRangeOne = 0;
-    const int stationary = 90;
+    const int stationary = 180;
     const int dropOneBottle = 4000;
     const int dropAllBottles = dropOneBottle * 3; // need an offset as well
 
 } servoValues;
+
+
 bool randomizeCancellation = false;
 const int ledPin = 13;
 const int servoPin = 9;

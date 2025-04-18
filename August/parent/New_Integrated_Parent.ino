@@ -1,12 +1,12 @@
 #include <SoftwareSerial.h>
 #include <Servo.h>
 
-// --------------------------
-// Flight Controller (Pixhawk) Communication
-// --------------------------
-#define FC_RX 2  // Flight Controller Serial RX Pin
-#define FC_TX 3  // Flight Controller Serial TX Pin
-SoftwareSerial flightControllerSerial(FC_RX, FC_TX); 
+// // --------------------------
+// // Flight Controller (Pixhawk) Communication
+// // --------------------------
+// #define FC_RX 2  // Flight Controller Serial RX Pin
+// #define FC_TX 3  // Flight Controller Serial TX Pin
+// SoftwareSerial flightControllerSerial(FC_RX, FC_TX); 
 
 // --------------------------
 // LoRa Module Communication (Parent ↔ Child)
@@ -29,7 +29,7 @@ SoftwareSerial loraSerial(LORA_RX, LORA_TX);
 // Typically, 1500 µs is neutral. Values greater than 1500 might make the winch raise,
 // while values lower than 1500 will lower the winch.
 const int PWM_IDLE  = 1500;
-const int PWM_RAISE = 1400;   // Adjust for your “raise” direction speed
+const int PWM_RAISE = 1425;   // Adjust for your “raise” direction speed
 const int PWM_LOWER = 1600;   // Adjust for your “lower” direction speed
 
 // --------------------------
@@ -56,6 +56,7 @@ float integralAccumulator = 0;
 // LoRa Addressing
 // --------------------------
 String oldChildAddress = "2";
+char lastCmd = 'I';
 
 // --------------------------
 // Create servo instance for ESC control
@@ -67,7 +68,7 @@ void setup() {
     Serial.begin(9600);
     
     // Initialize flight controller serial
-    flightControllerSerial.begin(9600);
+    // flightControllerSerial.begin(9600);
     
     // Initialize LoRa serial and module (uncomment the begin if needed)
     loraSerial.begin(9600);  
@@ -97,26 +98,31 @@ void setup() {
 
 void loop() {
     // 1. Handle commands from Flight Controller (Pixhawk)
-    Serial.print("Encoder: ");
-    Serial.println(encoderTicks);
+    // Serial.print("Encoder: ");
+    // Serial.println(encoderTicks);
     if (Serial.available() > 0) {
         char cmd = Serial.read();
         cmd = toupper(cmd);  // Normalize to uppercase
+        bool shouldMessage = cmd != lastCmd;
+        lastCmd = cmd;
         switch(cmd) {
             case 'L':
-                Serial.println("Lowering Winch...");
+                if (shouldMessage)
+                    Serial.println("Lowering Winch...");
                 setMotor(PWM_LOWER);
-                sendLoRaMessage("Winch Lowering");
+                // sendLoRaMessage("Winch Lowering");
                 break;
             case 'R':
-                Serial.println("Raising Winch...");
+                if (shouldMessage)
+                    Serial.println("Raising Winch...");
                 setMotor(PWM_RAISE);
-                sendLoRaMessage("Winch Raising");
+                // sendLoRaMessage("Winch Raising");
                 break;
             case 'I':
-                Serial.println("Winch Idle (Stop)...");
+                if (shouldMessage)
+                    Serial.println("Winch Idle (Stop)...");
                 stopMotor();
-                sendLoRaMessage("Winch Idle");
+                // sendLoRaMessage("Winch Idle");
                 break;
             case '1':
                 Serial.println("Sending 1");
@@ -126,6 +132,10 @@ void loop() {
                 Serial.println("Sending 0");
                 setMotor(1000);
                 break;
+            case 'D':
+                // Serial.println("Sending drop");
+                sendLoRaMessage("DROP_PAYLOAD");
+                break;
             default:
                 Serial.print("Unknown command received: ");
                 Serial.println(cmd);
@@ -134,13 +144,21 @@ void loop() {
     }
     
     // 2. (Optional) You can add code here to process LoRa incoming messages if needed.
-    /*
-    if (loraSerial.available()) {
-        String incomingMessage = loraSerial.readStringUntil('\n');
-        Serial.print("LoRa Received: ");
-        Serial.println(incomingMessage);
+    if (loraSerial.available())
+    {
+        String receivedMessage = loraSerial.readStringUntil('\n');
+        receivedMessage.trim();
+        // Serial.println(receivedMessage);
+        if (receivedMessage.startsWith("+RCV"))
+        {
+            int firstComma = receivedMessage.indexOf(',');
+            int secondComma = receivedMessage.indexOf(',', firstComma + 1);
+            int thirdComma = receivedMessage.indexOf(',', secondComma + 1);
+            String thirdValue = receivedMessage.substring(secondComma + 1, thirdComma);
+            Serial.print("Recieved LoRa: ");
+            Serial.println(thirdValue);
+        }
     }
-    */
 
     // (Optional) For debugging: print encoder ticks periodically
     // Serial.print("Encoder Ticks: ");
@@ -164,7 +182,7 @@ void setMotor(int power) {
 // You can also disable the encoder interrupts here if you wish.
 void stopMotor() {
     myservo.writeMicroseconds(PWM_IDLE);  // Neutral signal
-    Serial.println("Motor stopped.");
+    // Serial.println("Motor stopped.");
     
     // Optionally, disable encoder counting until next movement:
     // detachInterrupt(digitalPinToInterrupt(ENC_A_PIN));
